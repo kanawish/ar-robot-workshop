@@ -53,4 +53,49 @@ import javax.inject.Inject
  * @enduml
  *
  */
-class RobotActivity : Activity()
+class RobotActivity : Activity() {
+
+    @Inject lateinit var cameraHelper: CameraHelper
+    @Inject lateinit var videoHelper: VideoHelper
+
+    @Inject lateinit var networkClient: NetworkClient // Output telemetry
+    @Inject lateinit var server: NetworkServer // Input commands
+
+    /**
+     * MotorHat is a contributed driver for LadyAda's Motor Hat
+     */
+    private val motorHat: MotorHat by lazy {
+        try {
+            MotorHat(currentDevice().i2cBus())
+        } catch (e: IOException) {
+            throw RuntimeException("Failed to create MotorHat", e)
+        }
+    }
+
+    private val manager by lazy {
+        PeripheralManager.getInstance()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        Timber.d("${manager.gpioList}")
+
+        Timber.d("${manager.pwmList}")
+        Timber.d("${manager.i2cBusList}")
+        Timber.d("${manager.spiBusList}")
+        Timber.d("${manager.uartDeviceList}")
+
+        // Dump Camera Diagnostics to logcat.
+        dumpFormatInfo()
+    }
+
+    override fun onDestroy() {
+        Timber.i("onDestroy()")
+        super.onDestroy()
+
+        safeClose("Problem closing camera %s", cameraHelper::closeCamera)
+        safeClose("Problem closing motorHat %s", motorHat::close)
+    }
+
+}
