@@ -1,0 +1,4 @@
+include ':libCompat', ':libNetwork', ':appPrototypes', ':libUtils'
+include ':appARCoreRemote'
+include ':thingRobot'
+

@@ -1,0 +1,81 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
+
+android {
+    compileSdkVersion versions.compileSdk
+    buildToolsVersion versions.buildTools
+
+    defaultConfig {
+        applicationId "com.kanawish.ar.robotremote"
+        minSdkVersion versions.minSdkArCore
+        targetSdkVersion versions.targetSdk
+        versionCode 1
+        versionName "1.0"
+        ndk {
+            /*
+             * Sceneform is available for the following ABIs: arm64-v8a, armv7a,
+             * x86_64 and x86. This sample app enables arm64-v8a to run on
+             * devices and x86 to run on the emulator. Your application should
+             * list the ABIs most appropriate to minimize APK size (arm64-v8a recommended).
+             */
+            abiFilters 'arm64-v8a', 'x86'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    lintOptions {
+        abortOnError false
+    }
+    // NOTE: Skipping the de-sugaring causes a runtime with ARCore
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+}
+
+dependencies {
+    implementation project(':libCompat')
+    implementation project(':libNetwork')
+
+
+    kapt "com.github.stephanenicolas.toothpick:toothpick-compiler:$toothpick_version" // https://github.com/stephanenicolas/toothpick/blob/master/CHANGELOG.md
+
+    implementation "com.google.ar.sceneform.ux:sceneform-ux:1.5.1"
+
+    implementation "com.android.support:appcompat-v7:$support_version"
+
+    implementation 'com.jakewharton.rxbinding2:rxbinding-kotlin:2.1.1'
+
+    testImplementation 'junit:junit:4.12'
+}
+
+apply plugin: 'com.google.ar.sceneform.plugin'
+
+sceneform.asset(
+        'sampledata/models/andy.obj',
+        'default',
+        'sampledata/models/andy.sfa',
+        'src/main/res/raw/andy'
+)
+
+sceneform.asset('sampledata/01_curiosity_rover/model.gltf',
+        'default',
+        'sampledata/01_curiosity_rover/model.sfa',
+        'src/main/res/raw/curiosity')
+
+sceneform.asset('sampledata/02_mars_habitat/model.gltf',
+        'default',
+        'sampledata/02_mars_habitat/model.sfa',
+        'src/main/res/raw/habitat')
+
+sceneform.asset('sampledata/03_solar_system/model.gltf',
+        'default',
+        'sampledata/03_solar_system/model.sfa',
+        'src/main/res/raw/solar_system')
