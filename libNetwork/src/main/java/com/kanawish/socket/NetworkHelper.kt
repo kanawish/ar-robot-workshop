@@ -18,10 +18,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 
-const val HOST_PHONE_ADDRESS = "192.168.43.60" // [for RobotActivity] Pixel 2 Remote on ATR
+const val HOST_PHONE_ADDRESS = "10.11.94.193" // [for RobotActivity] Pixel 2 Remote on ATR
 //const val HOST_PHONE_ADDRESS = "192.168.43.1"    // [for RobotActivity] Nexus 5 Remote on ATR
 const val HOST_P2_ADDRESS = "192.168.43.60" // [for ARRemoteActivity] Pixel 2 on ATR
-const val ROBOT_ADDRESS = "192.168.43.220" // Robot on ATR
+const val ROBOT_ADDRESS = "10.11.89.103" // Robot on ATR
 
 const val PORT_CMD = 60123
 const val PORT_TM = 60124

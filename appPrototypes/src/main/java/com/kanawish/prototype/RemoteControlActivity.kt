@@ -3,23 +3,16 @@ package com.kanawish.prototype
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Bundle
-import android.view.KeyEvent
-import android.view.MotionEvent
 import com.jakewharton.rxbinding2.widget.textChanges
 import com.kanawish.robot.Command
 import com.kanawish.socket.NetworkClient
 import com.kanawish.socket.NetworkServer
 import com.kanawish.socket.ROBOT_ADDRESS
-import com.kanawish.socket.toBitmap
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.rxkotlin.plusAssign
 import kotlinx.android.synthetic.main.controller_ui.*
-import timber.log.Timber
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import kotlin.math.absoluteValue
-import kotlin.math.roundToInt
 
 /**
  * Simpler "phone in hand" remote control Activity.
@@ -29,6 +22,7 @@ import kotlin.math.roundToInt
 class RemoteControlActivity : Activity() {
 
     @Inject lateinit var server: NetworkServer // Our input channel
+    @Inject lateinit var client: NetworkClient // Our output channel
 
     private val disposables = CompositeDisposable()
 
@@ -46,7 +40,21 @@ class RemoteControlActivity : Activity() {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(imageView::setImageBitmap)
 
+        // This setup hooks up the UI buttons to send commands to the robot
+        var duration = 1L
+        disposables += durationEditText.textChanges()
+            .filter { it.isNotBlank() }
+            .map { charSequence -> charSequence.toString().toLong() }
+            .subscribe { duration = it }
+
+        forwardButton.setOnClickListener { send(Command(duration, -128, -128)) }
+        rightButton.setOnClickListener { send(Command(duration, 128, -128)) }
+        backwardButton.setOnClickListener { send(Command(duration, 128, 128)) }
+        leftButton.setOnClickListener { send(Command(duration, -128, 128)) }
+        scanButton.setOnClickListener { send(Command(duration, 0, 0)) }
     }
+
+    fun send(command: Command) = client.sendCommand(ROBOT_ADDRESS, command)
 
     override fun onPause() {
         super.onPause()
