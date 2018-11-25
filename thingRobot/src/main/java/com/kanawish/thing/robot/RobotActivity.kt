@@ -62,6 +62,13 @@ class RobotActivity : Activity() {
     @Inject lateinit var server: NetworkServer // Input commands
 
     /**
+     * Using Relays simplifies conversion of data to streams.
+     */
+    private val images = BehaviorRelay.create<ByteArray>()
+
+    private var disposables: CompositeDisposable = CompositeDisposable()
+
+    /**
      * MotorHat is a contributed driver for LadyAda's Motor Hat
      */
     private val motorHat: MotorHat by lazy {
@@ -88,6 +95,40 @@ class RobotActivity : Activity() {
 
         // Dump Camera Diagnostics to logcat.
         dumpFormatInfo()
+    }
+
+    override fun onResume() {
+        Timber.w("onResume()")
+        super.onResume()
+
+        // Each frame received from Camera2 API will be processed by ::onPictureTaken
+        videoHelper.startVideoCapture(::onPictureTaken.toImageAvailableListener())
+
+        // Whenever a new image frame is published (by ::onPictureTake), we send it over the network.
+        disposables += images
+            .throttleLast(333,TimeUnit.MILLISECONDS)
+            .subscribe {
+                // Timber.d("Sending image data [${it.size} bytes]")
+                networkClient.sendImageData(HOST_PHONE_ADDRESS, it)
+            }
+
+    }
+
+    // Send pictures as nearbyManager payloads.
+    private fun onPictureTaken(imageBytes: ByteArray) {
+        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size).also {
+            val outputStream = ByteArrayOutputStream()
+
+            // Forced downgrading of bitmap to emphasize speed, add quality when everything works.
+            Bitmap.createScaledBitmap(it, 160, 120, false)
+                .compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+
+            // Push new image into our Relay
+            images.accept(outputStream.toByteArray())
+            // Also push it in parallel to the image data socket
+
+            outputStream.close()
+        }
     }
 
     override fun onDestroy() {
