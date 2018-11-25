@@ -26,4 +26,31 @@ import kotlin.math.roundToInt
  * Sends joystick readings as commands to the Robot.
  */
 @SuppressLint("SetTextI18n")
-class RemoteControlActivity : Activity()
+class RemoteControlActivity : Activity() {
+
+    @Inject lateinit var server: NetworkServer // Our input channel
+
+    private val disposables = CompositeDisposable()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.controller_ui)
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Bitmap feed processing.
+        disposables += server
+            .receiveBitmaps() // InetSocketAddress(SERVER_IP, PORT_BM)
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(imageView::setImageBitmap)
+
+    }
+
+    override fun onPause() {
+        super.onPause()
+        disposables.clear()
+    }
+
+}
