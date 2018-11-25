@@ -88,4 +88,3 @@ class RemoteControlActivity : Activity() {
         return true
     }
 }
-}

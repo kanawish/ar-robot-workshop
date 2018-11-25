@@ -5,6 +5,7 @@
     <!-- Android Things requirements -->
     <uses-permission android:name="com.google.android.things.permission.MANAGE_SENSOR_DRIVERS"/>
     <uses-permission android:name="com.google.android.things.permission.MANAGE_INPUT_DRIVERS"/>
+    <uses-permission android:name="com.google.android.things.permission.USE_PERIPHERAL_IO"/>
 
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -33,7 +34,7 @@
             <!-- Launch activity automatically on boot -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.IOT_LAUNCHER"/>
+                <category android:name="android.intent.category.HOME"/>
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>

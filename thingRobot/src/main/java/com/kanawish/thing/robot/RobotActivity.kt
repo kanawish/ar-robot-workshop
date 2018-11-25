@@ -112,6 +112,25 @@ class RobotActivity : Activity() {
                 networkClient.sendImageData(HOST_PHONE_ADDRESS, it)
             }
 
+        // Our stream of commands.
+        disposables += server.receiveCommand(InetSocketAddress(ROBOT_ADDRESS, PORT_CMD))
+            // SwitchMap will drop previous commands in favor of latest one.
+            .switchMap { cmd ->
+                // This programs the "timed-release" of the left and right wheel drives.
+                Observable.concat(
+                        Observable.just({
+                            Timber.d("drive(Command(${cmd.duration}, ${cmd.left}, ${cmd.right}))")
+                            motorHat.drive(cmd.left, cmd.right)
+                        }),
+                        Observable.just({
+                            Timber.d("releaseAll(${cmd.duration}, ${cmd.left}, ${cmd.right})")
+                            motorHat.releaseAll()
+                        }).delay(cmd.duration, TimeUnit.MILLISECONDS)
+                )
+            }
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { it() }
+
     }
 
     // Send pictures as nearbyManager payloads.
