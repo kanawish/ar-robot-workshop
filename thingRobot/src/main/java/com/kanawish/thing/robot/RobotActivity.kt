@@ -7,8 +7,19 @@ import android.os.Bundle
 import com.google.android.things.contrib.driver.motorhat.MotorHat
 import com.google.android.things.pio.PeripheralManager
 import com.jakewharton.rxrelay2.BehaviorRelay
-import com.kanawish.robot.Telemetry
-import com.kanawish.socket.*
+import com.kanawish.socket.BITMAPS_SERVICE
+import com.kanawish.socket.COMMANDS_SERVICE
+import com.kanawish.socket.SERVICE_TYPE
+import com.kanawish.socket.buildDiscoveryListener
+import com.kanawish.socket.buildRegistrationListener
+import com.kanawish.socket.buildServerSocket
+import com.kanawish.socket.discoverService
+import com.kanawish.socket.findNsdManager
+import com.kanawish.socket.receiveCommand
+import com.kanawish.socket.registerService
+import com.kanawish.socket.sendBitmapByteArray
+import com.kanawish.socket.stopServiceDiscovery
+import com.kanawish.socket.unregisterService
 import com.kanawish.utils.camera.CameraHelper
 import com.kanawish.utils.camera.VideoHelper
 import com.kanawish.utils.camera.dumpFormatInfo
@@ -17,11 +28,10 @@ import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.rxkotlin.plusAssign
-import io.reactivex.rxkotlin.withLatestFrom
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import java.io.IOException
-import java.net.InetSocketAddress
+import java.net.ServerSocket
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -54,17 +64,31 @@ import javax.inject.Inject
  *
  */
 class RobotActivity : Activity() {
+    // Bind server socket on random port.
+    private val serverSocket: ServerSocket by lazy {
+        buildServerSocket()
+    }
+    private val registrationListener by lazy {
+        buildRegistrationListener()
+    }
+
+    private val outgoingImages = BehaviorRelay.create<ByteArray>()
+    private val discoveryListener by lazy {
+        findNsdManager()
+            .buildDiscoveryListener(BITMAPS_SERVICE) { discoveredService ->
+                disposables += outgoingImages.subscribe { byteArray ->
+                    sendBitmapByteArray(discoveredService, byteArray)
+                }
+            }
+    }
 
     @Inject lateinit var cameraHelper: CameraHelper
     @Inject lateinit var videoHelper: VideoHelper
 
-    @Inject lateinit var networkClient: NetworkClient // Output telemetry
-    @Inject lateinit var server: NetworkServer // Input commands
-
     /**
      * Using Relays simplifies conversion of data to streams.
      */
-    private val images = BehaviorRelay.create<ByteArray>()
+    private val capturedImages = BehaviorRelay.create<ByteArray>()
 
     private var disposables: CompositeDisposable = CompositeDisposable()
 
@@ -100,20 +124,22 @@ class RobotActivity : Activity() {
     override fun onResume() {
         Timber.w("onResume()")
         super.onResume()
+        registerService(SERVICE_TYPE, COMMANDS_SERVICE, serverSocket.localPort, registrationListener)
+        discoverService(discoveryListener)
 
         // Each frame received from Camera2 API will be processed by ::onPictureTaken
         videoHelper.startVideoCapture(::onPictureTaken.toImageAvailableListener())
 
         // Whenever a new image frame is published (by ::onPictureTake), we send it over the network.
-        disposables += images
-            .throttleLast(333,TimeUnit.MILLISECONDS)
+        disposables += capturedImages
+            .throttleLast(333, TimeUnit.MILLISECONDS)
             .subscribe {
                 // Timber.d("Sending image data [${it.size} bytes]")
-                networkClient.sendImageData(HOST_PHONE_ADDRESS, it)
+                outgoingImages.accept(it)
             }
 
         // Our stream of commands.
-        disposables += server.receiveCommand(InetSocketAddress(ROBOT_ADDRESS, PORT_CMD))
+        disposables += serverSocket.receiveCommand()
             // SwitchMap will drop previous commands in favor of latest one.
             .switchMap { cmd ->
                 // This programs the "timed-release" of the left and right wheel drives.
@@ -133,6 +159,21 @@ class RobotActivity : Activity() {
 
     }
 
+    override fun onPause() {
+        super.onPause()
+        unregisterService(registrationListener)
+        stopServiceDiscovery(discoveryListener)
+    }
+
+    override fun onDestroy() {
+        Timber.i("onDestroy()")
+        super.onDestroy()
+        serverSocket.close()
+
+        safeClose("Problem closing camera %s", cameraHelper::closeCamera)
+        safeClose("Problem closing motorHat %s", motorHat::close)
+    }
+
     // Send pictures as nearbyManager payloads.
     private fun onPictureTaken(imageBytes: ByteArray) {
         BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size).also {
@@ -143,19 +184,11 @@ class RobotActivity : Activity() {
                 .compress(Bitmap.CompressFormat.PNG, 100, outputStream)
 
             // Push new image into our Relay
-            images.accept(outputStream.toByteArray())
+            capturedImages.accept(outputStream.toByteArray())
             // Also push it in parallel to the image data socket
 
             outputStream.close()
         }
-    }
-
-    override fun onDestroy() {
-        Timber.i("onDestroy()")
-        super.onDestroy()
-
-        safeClose("Problem closing camera %s", cameraHelper::closeCamera)
-        safeClose("Problem closing motorHat %s", motorHat::close)
     }
 
 }
