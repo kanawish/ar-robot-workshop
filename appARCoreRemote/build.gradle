@@ -47,7 +47,7 @@ dependencies {
 
     kapt "com.github.stephanenicolas.toothpick:toothpick-compiler:$toothpick_version" // https://github.com/stephanenicolas/toothpick/blob/master/CHANGELOG.md
 
-    implementation "com.google.ar.sceneform.ux:sceneform-ux:1.5.1"
+    implementation "com.google.ar.sceneform.ux:sceneform-ux:1.7.0"
 
     implementation "com.android.support:appcompat-v7:$support_version"
 

@@ -34,6 +34,11 @@ class VideoHelper @Inject constructor(private val manager: CameraManager) {
             .looper.let { Handler(it) }
 
     @SuppressLint("MissingPermission")
+    fun startVideoCapture(consumer:(ByteArray)->Unit) {
+        startVideoCapture(consumer.toImageAvailableListener())
+    }
+
+    @SuppressLint("MissingPermission")
     fun startVideoCapture(videoFrameHandler: ImageReader.OnImageAvailableListener) {
         imageReader.setOnImageAvailableListener(videoFrameHandler, cameraHandler)
 

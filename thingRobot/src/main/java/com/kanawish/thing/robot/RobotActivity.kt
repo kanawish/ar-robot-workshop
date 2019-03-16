@@ -154,7 +154,7 @@ class RobotActivity : Activity() {
         Timber.i("onDestroy()")
         super.onDestroy()
 
-        safeClose("Problem closing camera %s", cameraHelper::closeCamera)
+        safeClose("Problem closing video %s", videoHelper::closeCamera)
         safeClose("Problem closing motorHat %s", motorHat::close)
     }
 
